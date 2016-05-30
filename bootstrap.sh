@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-NVM_VERSION=4.4.3
+NVM_VERSION=4.4.5
+PHPMYADMIN_VERSION=4.6.2
 
 # Color helpers
 export TERM=${TERM:-vt100} # avoid tput complaining when TERM is not set.
@@ -21,7 +22,7 @@ EOF
 )
 
 XDEBUG=$(cat <<EOF
-zend_extension=/usr/lib/php5/20131226/xdebug.so
+zend_extension=/usr/lib/php/20131226/xdebug.so
 EOF
 )
 
@@ -52,6 +53,7 @@ all() { # Configure everything on a new machine.
     set_apache_rewrite_mode && \
     install_php && \
     install_mysql && \
+    install_php_packages && \
  	install_xdebug && \
     install_memcached && \
     set_xdebug && \
@@ -65,10 +67,10 @@ set_apache_rewrite_mode() {
 	sudo mkdir /var/log/apache2/logs/
 }
 
-install_php() { # Download the PHP sources
-    sudo add-apt-repository -y ppa:ondrej/php5-5.6
+install_php() { # Install PHP 5.6
+    sudo LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
     sudo apt-get update
-    sudo apt-get install -y php5
+    sudo apt-get install -y php5.6
 }
 
 install_apache() { # Install apache
@@ -89,29 +91,33 @@ install_server_libs() { # Install server libs
     sudo apt-get install -y python-software-properties
     sudo apt-get install -y debconf-utils
     sudo apt-get install -y htop
+    sudo apt-get install -y language-pack-en-base
     sudo apt-get update
 }
 
+install_php_packages() {
+    sudo apt-get install -y php5.6-dev php5.6-xml
+    sudo apt-get install -y php5.6-mbstring php5.6-curl
+    sudo apt-get install -y php5.6-mysqlnd php-pear
+}
+
 install_xdebug() {
-	sudo apt-get install -y php5-dev php-pear
-    sudo apt-get install -y php5-curl
     sudo pecl install xdebug
     sudo service apache2 restart
-	# Add in /etc/php5/apache2/php.ini - zend_extension=/usr/lib/php5/20131226/xdebug.so (after restart server)
+	# Add in /etc/php/5.6/apache2/php.ini - zend_extension=/usr/lib/php5/20131226/xdebug.so (after restart server)
 }
 
 set_xdebug() { # Install Vhost
-    sudo mkdir /var/log/apache2/logs
-    sudo sh -c "echo '${XDEBUG}' >> /etc/php5/apache2/php.ini"
+    sudo sh -c "echo '${XDEBUG}' >> /etc/php/5.6/apache2/php.ini"
     sudo service apache2 restart
 }
 
 install_dev_tools() { # Install dev tools
     # Add PHPMyadmin
-    cd /var/www/ && sudo wget https://files.phpmyadmin.net/phpMyAdmin/4.6.0/phpMyAdmin-4.6.0-english.tar.gz
-    cd /var/www/ && sudo tar -zxvf phpMyAdmin-4.6.0-english.tar.gz
-    cd /var/www/ && sudo mv phpMyAdmin-4.6.0-english phpmyadmin
-    cd /var/www/ && sudo rm phpMyAdmin-4.6.0-english.tar.gz
+    cd /var/www/ && sudo wget https://files.phpmyadmin.net/phpMyAdmin/$PHPMYADMIN_VERSION/phpMyAdmin-$PHPMYADMIN_VERSION-english.tar.gz
+    cd /var/www/ && sudo tar -zxvf phpMyAdmin-$PHPMYADMIN_VERSION-english.tar.gz
+    cd /var/www/ && sudo mv phpMyAdmin-$PHPMYADMIN_VERSION-english phpmyadmin
+    cd /var/www/ && sudo rm phpMyAdmin-$PHPMYADMIN_VERSION-english.tar.gz
 
     sudo touch /etc/apache2/sites-available/$PHPMYADMIN_NAME.conf
     sudo sh -c "echo '${VHOST_PHPMYADIN}' > /etc/apache2/sites-available/$PHPMYADMIN_NAME.conf"
@@ -149,9 +155,7 @@ install_mysql() { # Install mysql
 }
 
 install_memcached() { 
-    sudo apt-get install -y php5-mysqlnd
-    sudo apt-get install -y php5
-    sudo apt-get install -y php5-memcache
+    sudo apt-get install -y php-memcache
     sudo apt-get install -y memcached
     sudo service apache2 restart
 }
